@@ -1,0 +1,18 @@
+{
+  "configurations": [
+    {
+      "args": [],
+      "cwd": "${fileDirname}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "name": "DEBUG",
+      "program": "${workspaceFolder}/build/game",
+      "request": "launch",
+      "stopAtEntry": false,
+      "type": "cppdbg",
+      "preLaunchTask": ""
+    }
+  ],
+  "version": "0.2.0"
+}

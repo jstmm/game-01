@@ -1,21 +1,17 @@
-# Game 01
+# Game 01 - Platform game
 
 ## Dependencies
-
 - Raylib
+- CMake
 
 ## Instructions
-
-To build
-
+Use those two scripts:
 ``` bash
-$ ./scripts/build.sh
+$ ./BUILD.sh
+$ ./RUN.sh
 ```
 
-To start the program
+To run on WSL, start **VcXsrv X Server** using *config.xlaunch* before starting
+the program from a WSL console.
 
-``` bash
-$ ./scripts/run.sh
-```
-
-To run on WSL, start **VcXsrv X Server** using *config.xlaunch* before starting the program from a WSL console
+Use the debug configuration in .vscode for debugging in VSCode.

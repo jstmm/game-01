@@ -1,4 +1,6 @@
-# Game 01 - Platform game
+# Game 01 - Platform game (work in progress)
+
+<img src="wip.gif" width="500">
 
 ## Dependencies
 - Raylib

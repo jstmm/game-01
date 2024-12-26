@@ -1,175 +1,161 @@
-#include <iostream>
-#include <format>
+#include <vector>
 
 #include "raylib.h"
 
-const int SCREEN_WIDTH = 1280;
-const int SCREEN_HEIGHT = 720;
-
-enum class Direction {
-    Up,
-    Down,
-    Left,
-    Right,
-    Idle
-};
-
-std::string direction_to_string(Direction dir)
-{
-    switch (dir) {
-        case Direction::Left: return "Left";
-        case Direction::Right: return "Right";
-        case Direction::Up: return "Up";
-        case Direction::Down: return "Down";
-        case Direction::Idle: return "Idle";
-        default: return "Unknown";
-    }
-}
+#define GRAVITY 600
+#define PLAYER_JUMP_SPD 400.0f
+#define PLAYER_HOR_SPD 400.0f
 
 typedef struct {
-    Direction horizontal_direction;
-    Direction vertical_direction;
-    float x;
-    float y;
+    Vector2 position;
     float width;
-    float height; 
-} Character;
+    float height;
+    float speed;
+    bool canJump;
+} Player;
 
-int step = 0;
+typedef struct {
+    Rectangle rect;
+    Color colour;
+} Item;
 
-void update_character_position(Character& c, Rectangle& platform)
+void updatePlayerPosition(Player& player, const std::vector<Item>& items)
 {
-    auto f_screen_width = (float) GetScreenWidth();
-    auto f_screen_height = (float) GetScreenHeight();
+    const float deltaTime = GetFrameTime();
+    const float minX = player.width / 2;
+    const float maxX = (float) GetScreenWidth() - (player.width / 2);
 
-    const float min_x = c.width / 2;
-    const float max_x = f_screen_width - (c.width / 2);
+    bool hitObstacle = false;
 
-    // TODO: replace this with proper collision for the ground
-    const float max_y = (f_screen_height - 50.f) - (c.height / 2);
+    if (IsKeyPressed(KEY_R)) {
+        player.position.x = 75.f;
+        player.position.y = 600.f;
+        player.speed = 0;
+        player.canJump = false;
+    }
 
-    if (c.horizontal_direction == Direction::Left) {
-        if (c.x < 0) {
-            c.x = 0.f;
-            c.horizontal_direction = Direction::Idle;
-        }
-        else if (
-            (c.x + c.width) <= platform.x &&
-            (c.y <= platform.y) &&
-            (c.vertical_direction == Direction::Idle)) {
-                c.vertical_direction = Direction::Down;
-        }
-        else {
-            c.x -= 10.f;
+    if (IsKeyDown(KEY_LEFT)) {
+        player.position.x -= PLAYER_HOR_SPD * deltaTime;
+    }
+    
+    if (IsKeyDown(KEY_RIGHT)) {
+        player.position.x += PLAYER_HOR_SPD * deltaTime;
+    }
+    
+    if (IsKeyPressed(KEY_SPACE) && player.canJump) {
+        player.speed = -PLAYER_JUMP_SPD;
+        player.canJump = false;
+    }
+
+    for (Item i : items) {
+        if (
+            (i.rect.x - (i.rect.width/2) <= player.position.x + (player.width/2)) &&
+            (player.position.x - (player.width/2) <= i.rect.x + (i.rect.width/2)) &&
+            (player.position.y <= i.rect.y - i.rect.height) &&
+            (player.position.y + (player.speed * deltaTime) >= i.rect.y - i.rect.height)
+        ) {
+                hitObstacle = true;
+                player.speed = 0.0f;
+                player.position.y = i.rect.y - i.rect.height;        
+                break;
         }
     }
 
-    if (c.horizontal_direction == Direction::Right) {
-        if (c.x > max_x) {
-            c.x = max_x;
-            c.horizontal_direction = Direction::Idle;
-        }
-        else if (
-            (platform.x + platform.width) <= c.x &&
-            (c.y <= platform.y) &&
-            (c.vertical_direction == Direction::Idle)) {
-                c.vertical_direction = Direction::Down;
-        }
-        else {
-            c.x += 10.f;
-        }
+    if (!hitObstacle) {
+        player.position.y += player.speed * deltaTime;
+        player.speed += GRAVITY * deltaTime;
+        player.canJump = false;
+    } else {
+        player.canJump = true;
     }
 
-    if (c.vertical_direction == Direction::Up) {
-        c.y -= 15;
-        if (c.y < 0) {
-            c.y = 0.f;
-        }
-        ++step;
-    }
-
-    if (c.vertical_direction == Direction::Down) {
-        if (c.y > max_y) {
-            c.y = max_y;
-            c.vertical_direction = Direction::Idle;
-        }
-        else if (
-            (platform.x - (platform.width / 2) - (c.width / 2)) <= c.x && c.x <= (platform.x + (platform.width / 2) + (c.width / 2)) &&
-            (platform.y - (platform.height / 2) - (c.height / 2)) <= c.y && c.y <= (platform.y + (platform.height / 2))) {
-                c.vertical_direction = Direction::Idle;
-        }
-        else {
-            c.y += 6;
-        }
-    }
+    if (player.position.x <= minX) player.position.x = minX;
+    if (player.position.x >= maxX) player.position.x = maxX;
 }
 
 int main()
 {
-    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
+    InitWindow(1280, 720, "Game 01");
     SetTargetFPS(60);
 
-    float velocity = 20.f;
+    Player player;
+    player.position = (Vector2) {
+        75.f,
+        600.f
+    };
+    player.width = 50.f;
+    player.height = 70.f;
+    player.speed = 0;
+    player.canJump = false;
 
-    Rectangle platform = {
-        GetScreenWidth() * 0.3f,
-        GetScreenHeight() * 0.75f,
-        100.f,
-        20.f
+    std::vector<Item> items = {
+        {
+            // Ground
+            { GetScreenWidth() / 2.f, (float)GetScreenHeight(), (float)GetScreenWidth(), 50.f },
+            LIME
+        },
+        {
+            // Platform
+            { 200.f, 600.f, 100.f, 20.f },
+            LIGHTGRAY
+        },
+        {
+            // Platform
+            { 400.f, 500.f, 100.f, 20.f },
+            LIGHTGRAY            
+        },
+        {
+            // Platform
+            { 600.f, 400.f, 100.f, 20.f },
+            LIGHTGRAY
+        },
+        {
+            // Platform
+            { 800.f, 300.f, 100.f, 20.f },
+            LIGHTGRAY
+        },
+        {
+            // Platform
+            { 1000.f, 200.f, 100.f, 20.f },
+            LIGHTGRAY
+        },
     };
 
-    float rect_width = 50.f;
-    float rect_height = 50.f;
-    Character character;
-    character.horizontal_direction = Direction::Idle;
-    character.vertical_direction = Direction::Down;
-    character.x = (GetScreenWidth() / 2);
-    character.y = (GetScreenHeight() / 2);
-    character.width = rect_width;
-    character.height = rect_height;
-
     while (!WindowShouldClose()) {
-#pragma region PROCESS INPUT
-        if (IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_A)) {
-            character.horizontal_direction = Direction::Left;
-        }
-        else if (IsKeyDown(KEY_RIGHT) || IsKeyDown(KEY_D)) {
-            character.horizontal_direction = Direction::Right;
-        }
-        else {
-            character.horizontal_direction = Direction::Idle;
-        }
 
-        if (IsKeyPressed(KEY_SPACE) && character.vertical_direction == Direction::Idle) {
-            character.vertical_direction = Direction::Up;
-        }
-
-        if (step > 15) {
-            step = 0;
-            character.vertical_direction = Direction::Down;
-        }
-#pragma endregion
-
-        update_character_position(character, platform);
+        // Update
+        updatePlayerPosition(player, items);
         
-BeginDrawing();
-        ClearBackground(BLACK);
+        // Draw
+        BeginDrawing();
+            ClearBackground(BLACK);
 
-        // Draw ground
-        DrawRectangle(0, GetScreenHeight() - 50, GetScreenWidth(), 50, GREEN);
+            // Items
+            for (auto i : items) {
+                Rectangle itemRect = {
+                    i.rect.x - (i.rect.width / 2),
+                    i.rect.y - i.rect.height,
+                    i.rect.width,
+                    i.rect.height
+                };
+                DrawRectangleRec(itemRect, i.colour);
+            }
 
-        // Draw platform
-        DrawRectangle(platform.x - (platform.width / 2), platform.y - (character.height / 2), platform.width, platform.height, BLUE);
+            // Player
+            Rectangle playerRect = {
+                player.position.x - (player.width / 2),
+                player.position.y - player.height,
+                player.width,
+                player.height
+            };
+            DrawRectangleRec(playerRect, GOLD);
+            // DrawRectangle(player.x - 10, player.y - 30, player.width / 5, player.height + 10, BLUE);
+            // DrawRectangle(player.x + player.width, player.y - 30, player.width / 5, player.height + 10, BLUE);
+            // DrawRectangle(player.x, player.y, player.width, 10.f, GOLD);
 
-        // Draw character
-        DrawRectangle(character.x - (character.width / 2), character.y - (character.height / 2), character.width, character.height, RED);
-        // DrawRectangle(character.x - 10, character.y - 30, character.width / 5, character.height + 10, BLUE);
-        // DrawRectangle(character.x + character.width, character.y - 30, character.width / 5, character.height + 10, BLUE);
-        // DrawRectangle(character.x, character.y, character.width, 10.f, GOLD);
+            DrawText("Arrow keys for moving - 'r' to restart", 30, 30, 44, WHITE);
 
-        DrawText(std::format("Horizontal : {}", direction_to_string(character.horizontal_direction)).c_str(), 10, 10, 20, LIGHTGRAY);
-        DrawText(std::format("Vertical : {}", direction_to_string(character.vertical_direction)).c_str(), 10, 30, 20, LIGHTGRAY);
-EndDrawing();
+        EndDrawing();
     }
 
     CloseWindow();

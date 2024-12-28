@@ -6,6 +6,8 @@
 #define GRAVITY 600
 #define PLAYER_JUMP_SPD 400.0f
 #define PLAYER_HOR_SPD 400.0f
+#define SCREEN_WIDTH 1280.0f
+#define SCREEN_HEIGHT 720.0f
 
 enum class State {
     Idle,
@@ -20,6 +22,10 @@ typedef struct {
     float speed;
     bool canJump;
     State state;
+    Vector2 origin;
+    int currentImage;
+    int timeInIdleState;
+    int timeInWalkingState;
 } Player;
 
 typedef struct {
@@ -31,32 +37,64 @@ bool areColoursEqual(Color c1, Color c2) {
     return ((c1.r == c2.r) && (c1.g == c2.g) && (c1.b == c2.b) && (c1.a == c2.a));
 }
 
-void updatePlayerPosition(Player& player, const std::vector<Item>& items)
-{
-    const float deltaTime = GetFrameTime();
-    const float minX = player.width / 2;
-    const float maxX = (float) GetScreenWidth() - (player.width / 2);
-
-    bool hitObstacle = false;
-
+void updateStates(Player& player) {
     if (IsKeyPressed(KEY_R)) {
         player.position.x = 75.f;
         player.position.y = 600.f;
         player.speed = 0;
         player.canJump = false;
+        player.timeInIdleState = 0;
+        player.timeInWalkingState = 0;
+        return;
     }
 
-    if (IsKeyDown(KEY_LEFT)) {
-        player.position.x -= PLAYER_HOR_SPD * deltaTime;
-    }
-    
-    if (IsKeyDown(KEY_RIGHT)) {
-        player.position.x += PLAYER_HOR_SPD * deltaTime;
-    }
-    
     if (IsKeyPressed(KEY_SPACE) && player.canJump) {
         player.speed = -PLAYER_JUMP_SPD;
         player.canJump = false;
+    }
+
+    if (!player.canJump) {
+        player.timeInIdleState = 0;
+        player.timeInWalkingState = 0;
+    }
+
+    if (IsKeyDown(KEY_LEFT)) {
+        player.state = State::MovingLeft;
+        if (player.canJump) {
+            ++player.timeInWalkingState;
+            player.timeInIdleState = 0;
+        }
+    }
+    else if (IsKeyDown(KEY_RIGHT)) {
+        player.state = State::MovingRight;
+        if (player.canJump) {
+            ++player.timeInWalkingState;
+            player.timeInIdleState = 0;
+        }
+    }
+    else {
+        player.state = State::Idle;
+        if (player.canJump) {
+            ++player.timeInIdleState;
+            player.timeInWalkingState = 0;
+        }
+    }
+}
+
+void updatePlayerPosition(Player& player, const std::vector<Item>& items)
+{
+    const float deltaTime = GetFrameTime();
+    const float minX = player.width / 2;
+    const float maxX = SCREEN_WIDTH - (player.width / 2);
+
+    bool hitObstacle = false;
+
+    if (player.state == State::MovingLeft) {
+        player.position.x -= PLAYER_HOR_SPD * deltaTime;
+    }
+    
+    if (player.state == State::MovingRight) {
+        player.position.x += PLAYER_HOR_SPD * deltaTime;
     }
 
     for (Item i : items) {
@@ -85,19 +123,63 @@ void updatePlayerPosition(Player& player, const std::vector<Item>& items)
     if (player.position.x >= maxX) player.position.x = maxX;
 }
 
+int imageRefForTimeInWalkingState(const int time)
+{
+    std::vector<int> imageRefs = {2, 3, 4, 5};
+    int timePerImage = 6;
+
+    int duration = imageRefs.size() * timePerImage;
+    int result;
+
+    for (int i = 0; i < imageRefs.size(); ++i) {
+        if ((time % duration) < (timePerImage * (i + 1))) {
+            result = imageRefs.at(i);
+            break;
+        }
+    }
+    return result;
+}
+
+void updatePlayerImage(Player& player, Rectangle& srcPlayer, int playerWidth) {
+    if (!player.canJump) {
+        player.currentImage = 3;
+        srcPlayer.width = (player.state == State::MovingLeft) ? -playerWidth :
+                          (player.state == State::MovingRight) ? playerWidth :
+                          srcPlayer.width;
+        return;
+    }
+
+    if (player.state == State::MovingLeft) {
+        player.currentImage = imageRefForTimeInWalkingState(player.timeInWalkingState);
+        srcPlayer.width = -playerWidth;
+        return;
+    }
+
+    if (player.state == State::MovingRight) {
+        player.currentImage = imageRefForTimeInWalkingState(player.timeInWalkingState);
+        srcPlayer.width = playerWidth;
+        return;
+    }
+
+    if (player.state == State::Idle) {
+        if (player.timeInIdleState < 120) {
+            player.currentImage = 1;
+        }
+        else {
+            player.currentImage = 0;
+        }
+    }
+}
+
 int main()
 {
-    InitWindow(1280, 720, "Game 01");
+    InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
     SetTargetFPS(60);
-    
-    int screenWidth = GetScreenWidth();
-    int screenHeight = GetScreenHeight();
   
-    Texture2D texture = LoadTexture("resources/monkeylad_further.png");
-
+    // Import the sprite sheet
+    Texture2D spriteSheet = LoadTexture("resources/monkeylad_further.png");
     float platformWidth = 47, platformHeight = 8;
-    Rectangle srcPlatform = { 448, 32, 47, 8 };
-
+    Rectangle srcPlatform = { 448, 33, 47, 8 };
     float playerWidth = 16;
     Rectangle srcPlayer = { 448, 208, 16, 24 };
     std::vector<Vector2> monkeys = {
@@ -107,34 +189,32 @@ int main()
         { 496, 208 },
         { 512, 208 },
         { 528, 208 },
-        { 544, 208 },
     };
 
+    // Initialise entities
     std::vector<Item> items = {
-        // Ground
         {
-            { screenWidth / 2.f, (float)screenHeight, (float)screenWidth, 50.f },
+            { SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH, 50.f },
             LIME
         },
-        // Platforms
         {
-            { 200.f, 600.f, 100.f, 20.f },
+            { 200.f, 600.f, platformWidth * 2, platformHeight * 2 },
             LIGHTGRAY
         },
         {
-            { 400.f, 500.f, 100.f, 20.f },
-            LIGHTGRAY            
-        },
-        {
-            { 600.f, 400.f, 100.f, 20.f },
+            { 400.f, 500.f, platformWidth * 2, platformHeight * 2 },
             LIGHTGRAY
         },
         {
-            { 800.f, 300.f, 100.f, 20.f },
+            { 600.f, 400.f, platformWidth * 2, platformHeight * 2 },
             LIGHTGRAY
         },
         {
-            { 1000.f, 200.f, 100.f, 20.f },
+            { 800.f, 300.f, platformWidth * 2, platformHeight * 2 },
+            LIGHTGRAY
+        },
+        {
+            { 1000.f, 200.f, platformWidth * 2, platformHeight * 2 },
             LIGHTGRAY
         },
     };
@@ -151,54 +231,20 @@ int main()
     player.speed = 0;
     player.canJump = false;
     player.state = State::Idle;
-    Vector2 originPlayer = { player.width / 2, player.height };
-
-    int currentImage = 0;
-    int delay = 120;
+    player.origin = { player.width / 2, player.height };
+    player.currentImage = 0;
+    player.timeInIdleState = 0;
+    player.timeInWalkingState = 0;
 
     while (!WindowShouldClose()) {
-
         // Update
+        updateStates(player);
         updatePlayerPosition(player, items);
+        updatePlayerImage(player, srcPlayer, playerWidth);
+        srcPlayer.x = monkeys.at(player.currentImage).x;
+        srcPlayer.y = monkeys.at(player.currentImage).y;
 
-        if (IsKeyDown(KEY_RIGHT)) {
-            player.state = State::MovingRight;
-        }
-        else if (IsKeyDown(KEY_LEFT)) {
-            player.state = State::MovingLeft;
-        }
-        else if (player.state != State::Idle) {
-            if (delay > 0) {
-                // Small delay before returning to Idle state
-                --delay;
-            }
-            else {
-                player.state = State::Idle;
-                delay = 120;
-            }
-        }
-
-        switch (player.state) {
-            case State::Idle:
-                currentImage = 0;
-                srcPlayer.width = playerWidth;
-                break;
-
-            case State::MovingLeft:
-                currentImage = 2;
-                srcPlayer.width = -playerWidth;
-                break;
-
-            case State::MovingRight:
-                currentImage = 2;
-                srcPlayer.width = playerWidth;
-                break;
-        }
-        
-        srcPlayer.x = monkeys.at(currentImage).x;
-        srcPlayer.y = monkeys.at(currentImage).y;
-        
-        // Draw
+        // Render
         BeginDrawing();
             ClearBackground(SKYBLUE);
 
@@ -214,7 +260,7 @@ int main()
                     DrawRectangleRec(rect, item.colour);
                 }
                 else {
-                    DrawTexturePro(texture, srcPlatform, item.rect, originPlatform, 0, WHITE);
+                    DrawTexturePro(spriteSheet, srcPlatform, item.rect, originPlatform, 0, WHITE);
                 }
             }
 
@@ -225,13 +271,13 @@ int main()
                 player.width,
                 player.height
             };
-            DrawTexturePro(texture, srcPlayer, destRect, originPlayer, 0, WHITE);
+            DrawTexturePro(spriteSheet, srcPlayer, destRect, player.origin, 0, WHITE);
 
             DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart", 30, 30, 44, WHITE);
         EndDrawing();
     }
 
-    UnloadTexture(texture);
+    UnloadTexture(spriteSheet);
     CloseWindow();
 
     return 0;

@@ -12,7 +12,7 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-file(GLOB sources "${CMAKE_SOURCE_DIR}/src/*.cpp")
+file(GLOB sources "${CMAKE_SOURCE_DIR}/src/*.cc")
 
 add_executable(game ${sources})
 

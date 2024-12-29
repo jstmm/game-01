@@ -1,20 +1,20 @@
 # Game 01 - Platform game (work in progress)
 
 ## Dependencies
-- Raylib
-- CMake
+- GCC (supporting C++23)
+- Raylib (works on 5.6)
+- CMake (works on 3.28.3)
 
 ## Instructions
-Use those two scripts:
+Use these two scripts:
 ``` bash
 $ ./BUILD.sh
 $ ./RUN.sh
 ```
+or use the scripts in the .vscode folder.
 
 To run on WSL, start **VcXsrv X Server** using *config.xlaunch* before starting
 the program from a WSL console.
-
-Use the debug configuration in .vscode for debugging in VSCode.
 
 ## Updates
 

@@ -2,16 +2,16 @@
   "configurations": [
     {
       "args": [],
-      "cwd": "${fileDirname}",
+      "cwd": "${workspaceFolder}",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
       "name": "DEBUG",
-      "program": "${workspaceFolder}/build/game",
+      "preLaunchTask": "BUILD DEBUG",
+      "program": "${workspaceFolder}/build/game_debug",
       "request": "launch",
       "stopAtEntry": false,
-      "type": "cppdbg",
-      "preLaunchTask": ""
+      "type": "cppdbg"
     }
   ],
   "version": "0.2.0"

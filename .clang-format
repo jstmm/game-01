@@ -1,0 +1,9 @@
+---
+BasedOnStyle: Microsoft
+BraceWrapping:
+  AfterClass: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterFunction: true
+  AfterControlStatement: false
+---

@@ -17,8 +17,6 @@
 
 # g++ $FLAGS src/*.cpp -o build/game -lraylib -lGL -lm -lpthread -ldl -lrt -lX11
 
-# echo "Project built ($BUILD_TYPE)"
-
 run_command() {
     echo "Running: $*"
     "$@"

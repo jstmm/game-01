@@ -4,21 +4,8 @@
 		{
 			"type": "cppbuild",
 			"label": "BUILD DEBUG",
-			"command": "/usr/bin/g++",
-			"args": [
-				"-fdiagnostics-color=always",
-				"-g",
-				"${workspaceFolder}/src/*.cc",
-				"-o",
-				"${workspaceFolder}/build/game_debug",
-				"-lraylib",
-				"-lGL",
-				"-lm",
-				"-lpthread",
-				"-ldl",
-				"-lrt",
-				"-lX11"
-			],
+			"command": "./scripts/BUILD.sh",
+			"args": [],
 			"options": {
 				"cwd": "${workspaceFolder}"
 			},
@@ -28,8 +15,7 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"detail": "compiler: /usr/bin/g++"
+			}
 		}
 	]
 }

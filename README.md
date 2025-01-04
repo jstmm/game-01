@@ -8,8 +8,8 @@
 ## Instructions
 Use these two scripts:
 ``` bash
-$ ./BUILD.sh
-$ ./RUN.sh
+$ ./scripts/BUILD.sh
+$ ./scripts/RUN.sh
 ```
 or use the scripts in the .vscode folder.
 

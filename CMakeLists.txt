@@ -12,13 +12,14 @@ endif()
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+
 file(GLOB sources "${CMAKE_SOURCE_DIR}/src/*.cc")
 
-add_executable(game ${sources})
+add_executable(${PROJECT_NAME} ${sources})
 
-# target_include_directories(game PRIVATE "${CMAKE_SOURCE_DIR}/include")
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/lib")
 
-target_link_libraries(game
+target_link_libraries(${PROJECT_NAME}
   raylib
   GL
   m

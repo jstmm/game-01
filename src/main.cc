@@ -29,12 +29,12 @@ typedef struct
     int currentImage;
     int timeInIdleState;
     int timeInWalkingState;
+    unsigned int score;
 } Player;
 
 typedef struct
 {
     Rectangle rec;
-    Color colour;
 } Platform;
 
 typedef struct
@@ -46,15 +46,20 @@ typedef struct
 
 typedef struct
 {
-    Player &player;
-    std::vector<Platform> &platforms;
-    std::vector<Collectible> &collectibles;
+    Player player;
+    std::vector<Platform> platforms;
+    std::vector<Collectible> collectibles;
 } Scene;
+Scene scene;
 
-bool areColoursEqual(Color c1, Color c2)
+typedef struct
 {
-    return ((c1.r == c2.r) && (c1.g == c2.g) && (c1.b == c2.b) && (c1.a == c2.a));
-}
+    Texture2D spriteSheet;
+    Rectangle srcPlatform;
+    Rectangle srcPlayer;
+    Rectangle srcCollectible;
+} SpriteCollection;
+SpriteCollection spriteCollection;
 
 void updateUserState(Scene &scene)
 {
@@ -197,26 +202,19 @@ void updatePlayerImage(Player &player, Rectangle &srcPlayer, int playerWidth)
     }
 }
 
-int main()
+void Init()
 {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
     SetTargetFPS(60);
 
-    // Import the sprite sheet
-    Texture2D spriteSheet = LoadTexture("resources/monkeylad_further.png");
+    spriteCollection.spriteSheet = LoadTexture("resources/monkeylad_further.png");
 
-
-
-    float playerWidth = 16;
-    Rectangle srcPlayer = {448, 208, 16, 24};
-    std::vector<Vector2> monkeys = {
-        {448, 208}, {464, 208}, {480, 208}, {496, 208}, {512, 208}, {528, 208},
-    };
-    short scale = 3;
+    spriteCollection.srcPlayer = {448, 208, 16, 24};
+    short scalePlayer = 3;
     Player player;
     player.position = (Vector2){75.f, 600.f};
-    player.width = srcPlayer.width * scale;
-    player.height = srcPlayer.height * scale;
+    player.width = spriteCollection.srcPlayer.width * scalePlayer;
+    player.height = spriteCollection.srcPlayer.height * scalePlayer;
     player.speed = 0;
     player.canJump = false;
     player.state = State::Idle;
@@ -224,98 +222,135 @@ int main()
     player.currentImage = 0;
     player.timeInIdleState = 0;
     player.timeInWalkingState = 0;
+    player.score = 0;
+    scene.player = player;
 
-
-    Rectangle srcCollectible = { 592, 352, 16, 16 };
-
-    Rectangle srcPlatform = {448, 33, 47, 8};
-    // Initialise entities
-    std::vector<Platform> platforms = {
-        {{SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH, 50.f}, LIME},
-        {{200.f, 600.f, srcPlatform.width * 2, srcPlatform.height * 2}, LIGHTGRAY},
-        {{400.f, 500.f, srcPlatform.width * 2, srcPlatform.height * 2}, LIGHTGRAY},
-        {{600.f, 400.f, srcPlatform.width * 2, srcPlatform.height * 2}, LIGHTGRAY},
-        {{800.f, 300.f, srcPlatform.width * 2, srcPlatform.height * 2}, LIGHTGRAY},
-        {{1000.f, 200.f, srcPlatform.width * 2, srcPlatform.height * 2}, LIGHTGRAY},
+    spriteCollection.srcPlatform = {448, 33, 47, 8};
+    short int scalePlatform = 2;
+    scene.platforms = {
+        {{SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH, 50.f}},
+        {{200.f, 600.f, spriteCollection.srcPlatform.width * scalePlatform,
+          spriteCollection.srcPlatform.height * scalePlatform}},
+        {{400.f, 500.f, spriteCollection.srcPlatform.width * scalePlatform,
+          spriteCollection.srcPlatform.height * scalePlatform}},
+        {{600.f, 400.f, spriteCollection.srcPlatform.width * scalePlatform,
+          spriteCollection.srcPlatform.height * scalePlatform}},
+        {{800.f, 300.f, spriteCollection.srcPlatform.width * scalePlatform,
+          spriteCollection.srcPlatform.height * scalePlatform}},
+        {{1000.f, 200.f, spriteCollection.srcPlatform.width * scalePlatform,
+          spriteCollection.srcPlatform.height * scalePlatform}},
     };
-    Vector2 originPlatform = {100.f / 2, 20.f};
 
+    spriteCollection.srcCollectible = {592, 352, 16, 16};
+    short int scaleCollectible = 2;
+    scene.collectibles = {{
+                              {440, 650, spriteCollection.srcCollectible.width * scaleCollectible,
+                               spriteCollection.srcCollectible.height * scaleCollectible},
+                              {16 / 2, 16 / 2},
+                              false,
+                          },
+                          {
+                              {540, 650, spriteCollection.srcCollectible.width * scaleCollectible,
+                               spriteCollection.srcCollectible.height * scaleCollectible},
+                              {16 / 2, 16 / 2},
+                              false,
+                          },
+                          {
+                              {640, 650, spriteCollection.srcCollectible.width * scaleCollectible,
+                               spriteCollection.srcCollectible.height * scaleCollectible},
+                              {16 / 2, 16 / 2},
+                              false,
+                          },
+                          {
+                              {740, 650, spriteCollection.srcCollectible.width * scaleCollectible,
+                               spriteCollection.srcCollectible.height * scaleCollectible},
+                              {16 / 2, 16 / 2},
+                              false,
+                          },
+                          {
+                              {840, 650, spriteCollection.srcCollectible.width * scaleCollectible,
+                               spriteCollection.srcCollectible.height * scaleCollectible},
+                              {16 / 2, 16 / 2},
+                              false,
+                          }};
+}
 
+void Update()
+{
+    float playerWidth = 16;
+    std::vector<Vector2> monkeys = {
+        {448, 208}, {464, 208}, {480, 208}, {496, 208}, {512, 208}, {528, 208},
+    };
+    updateUserState(scene);
+    updatePlayerPosition(scene);
+    updatePlayerImage(scene.player, spriteCollection.srcPlayer, playerWidth);
+    spriteCollection.srcPlayer.x = monkeys.at(scene.player.currentImage).x;
+    spriteCollection.srcPlayer.y = monkeys.at(scene.player.currentImage).y;
 
-    std::vector<Collectible> collectibles = {{{ 440, 650, 30, 40 }, { 16/2, 16/2 }, false, },
-                                             {{ 540, 650, 30, 40 }, { 16/2, 16/2 }, false, },
-                                             {{ 640, 650, 30, 40 }, { 16/2, 16/2 }, false, },
-                                             {{ 740, 650, 30, 40 }, { 16/2, 16/2 }, false, },
-                                             {{ 840, 650, 30, 40 }, { 16/2, 16/2 }, false, }};
+    for (auto &c : scene.collectibles) {
+        Rectangle colD = {c.rec.x - c.origin.x, c.rec.y - c.origin.y, c.rec.width, c.rec.height};
+        Rectangle playerD = {scene.player.position.x - scene.player.origin.x,
+                             scene.player.position.y - scene.player.origin.y, scene.player.width, scene.player.height};
 
-    Scene scene = {player, platforms, collectibles};
-
-    unsigned int score = 0;
-
-    while (!WindowShouldClose()) {
-        // Update
-        updateUserState(scene);
-        updatePlayerPosition(scene);
-        updatePlayerImage(player, srcPlayer, playerWidth);
-        srcPlayer.x = monkeys.at(player.currentImage).x;
-        srcPlayer.y = monkeys.at(player.currentImage).y;
-
-        for (auto &c : collectibles) {
-            Rectangle colD = {
-                c.rec.x - c.origin.x,
-                c.rec.y - c.origin.y,
-                c.rec.width,
-                c.rec.height
-            };
-            Rectangle playerD = {
-                player.position.x - player.origin.x,
-                player.position.y - player.origin.y,
-                player.width,
-                player.height
-            };
-
-            if (CheckCollisionRecs(colD, playerD) && !c.isCollected) {
-                c.isCollected = true;
-                score += 1;
-            }
+        if (CheckCollisionRecs(colD, playerD) && !c.isCollected) {
+            c.isCollected = true;
+            scene.player.score += 1;
         }
+    }
+}
 
-        // Render
-        BeginDrawing();
+void Draw()
+{
+    BeginDrawing();
 
-        ClearBackground(SKYBLUE);
+    ClearBackground(SKYBLUE);
 
-        // Ground
-        auto g = platforms.at(0);
-        Rectangle groundDraw = {g.rec.x - (g.rec.width / 2), g.rec.y - g.rec.height, g.rec.width, g.rec.height};
-        DrawRectangleRec(groundDraw, g.colour);
+    // Ground
+    auto g = scene.platforms.at(0);
+    Rectangle groundDraw = {g.rec.x - (g.rec.width / 2), g.rec.y - g.rec.height, g.rec.width, g.rec.height};
+    DrawRectangleRec(groundDraw, LIME);
 
-        // Platforms
-        auto subset = platforms | std::views::drop(1) | std::views::take(platforms.size() - 1);
-        for (auto p : subset) {
-            DrawTexturePro(spriteSheet, srcPlatform, p.rec, originPlatform, 0, WHITE);
-        }
-
-        // Player
-        Rectangle playerDraw = {player.position.x, player.position.y, player.width, player.height};
-        DrawTexturePro(spriteSheet, srcPlayer, playerDraw, player.origin, 0, WHITE);
-
-        // Collectibles
-        for (auto c : collectibles) {
-            if (!c.isCollected) {
-                DrawTexturePro(spriteSheet, srcCollectible, c.rec, c.origin, 0, WHITE);
-            }
-        }
-
-        // UI
-        DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart", 30, 30, 44, WHITE);
-        DrawText(std::format("Score: {}", score).c_str(), SCREEN_WIDTH - 300, 30, 44, WHITE);
-
-        EndDrawing();
+    // Platforms
+    auto subset = scene.platforms | std::views::drop(1) | std::views::take(scene.platforms.size() - 1);
+    for (auto p : subset) {
+        DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcPlatform, p.rec,
+                       {p.rec.width / 2, p.rec.height}, 0, WHITE);
     }
 
-    UnloadTexture(spriteSheet);
+    // Player
+    Rectangle playerDraw = {scene.player.position.x, scene.player.position.y, scene.player.width, scene.player.height};
+    DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcPlayer, playerDraw, scene.player.origin, 0, WHITE);
+
+    // Collectibles
+    for (auto c : scene.collectibles) {
+        if (!c.isCollected) {
+            DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcCollectible, c.rec, c.origin, 0, WHITE);
+        }
+    }
+
+    // UI
+    DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart", 30, 30, 44, WHITE);
+    DrawText(std::format("Score: {}", scene.player.score).c_str(), SCREEN_WIDTH - 300, 30, 44, WHITE);
+
+    EndDrawing();
+}
+
+void Close()
+{
+    UnloadTexture(spriteCollection.spriteSheet);
     CloseWindow();
+}
+
+int main()
+{
+    Init();
+
+    while (!WindowShouldClose()) {
+        Update();
+        Draw();
+    }
+
+    Close();
 
     return 0;
 }

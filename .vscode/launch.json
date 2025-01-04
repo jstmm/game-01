@@ -8,7 +8,7 @@
       "MIMode": "gdb",
       "name": "DEBUG",
       "preLaunchTask": "BUILD DEBUG",
-      "program": "${workspaceFolder}/build/game_debug",
+      "program": "${workspaceFolder}/build/game",
       "request": "launch",
       "stopAtEntry": false,
       "type": "cppdbg"

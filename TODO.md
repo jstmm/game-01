@@ -1,13 +1,16 @@
-# TODO List
+# TODO
 
-## Features
+## Features / Improvements
 
-- [ ] Add collectible items with counter
-- [ ] Find a more intuitive wayto define the platform locations
-- [ ] Set a window icon
+* Level editor
+  * Add a way to switch to editor
+  * Save / restore level
+* Add inventory
+* Set a window icon
 
 ## Bugs
 
-## Improvements
+## Done
 
-- [x] Keep showing the same image when character is jumping - do not reset to facing character
+* Keep showing the same image when character is jumping - do not reset to facing character
+* Add collectible items with counter

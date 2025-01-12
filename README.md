@@ -1,4 +1,4 @@
-# Game 01 - Platform game (work in progress)
+# Game 01 - Platform game (WIP)
 
 ## Dependencies
 - GCC (supporting C++23)
@@ -16,10 +16,19 @@ or use the scripts in the .vscode folder.
 To run on WSL, start **VcXsrv X Server** using *config.xlaunch* before starting
 the program from a WSL console.
 
-## Updates
+## TODO
 
-27/12/2024:
-<p><img src="resources/wip_02.gif" width="500"></p>
+### Features
 
-26/12/2024:
-<p><img src="resources/wip_01.gif" width="500"></p>
+- [x] Add collectible items with counter
+- [ ] **Level editor**
+  - [x] Add a way to switch to editor
+  - [ ] Save / restore level
+- [ ] Add inventory
+- [ ] Set a window/taskbar icon
+
+### Improvements
+
+- [x] Keep showing the same image when character is jumping - do not reset to facing character
+
+### Bugs

@@ -2,14 +2,14 @@
 
 ## Dependencies
 - GCC (supporting C++23)
-- Raylib (works on 5.6)
+- Raylib (works on 5.5)
 - CMake (works on 3.28.3)
 
 ## Instructions
 Use these two scripts:
 ``` bash
-$ ./scripts/BUILD.sh
-$ ./scripts/RUN.sh
+$ ./BUILD.sh
+$ ./RUN.sh
 ```
 or use the scripts in the .vscode folder.
 
@@ -23,12 +23,15 @@ the program from a WSL console.
 - [x] Add collectible items with counter
 - [ ] **Level editor**
   - [x] Add a way to switch to editor
-  - [ ] Save / restore level
+  - [x] Save / restore level
 - [ ] Add inventory
 - [ ] Set a window/taskbar icon
 
 ### Improvements
 
 - [x] Keep showing the same image when character is jumping - do not reset to facing character
+- [ ] Complete Meson build script
 
 ### Bugs
+
+- [ ] Release build failing

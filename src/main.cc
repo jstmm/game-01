@@ -2,92 +2,57 @@
 #include <memory>
 #include <ranges>
 #include <vector>
+#include <sstream>
 
-#include "raylib.h"
-
-#define GRAVITY 600
-#define PLAYER_JUMP_SPD 400.0f
-#define PLAYER_HOR_SPD 400.0f
-#define SCREEN_WIDTH 1280.0f
-#define SCREEN_HEIGHT 720.0f
-
-enum class State
-{
-    Idle,
-    MovingLeft,
-    MovingRight
-};
-
-typedef struct
-{
-    float width;
-    float height;
-    Vector2 origin;
-    Vector2 position;
-    State state;
-    float speed;
-    bool canJump;
-    int currentImage;
-    int timeInIdleState;
-    int timeInWalkingState;
-    unsigned int score;
-} Player;
-
-typedef struct
-{
-    Rectangle rec;
-} Platform;
-
-typedef struct
-{
-    Rectangle rec;
-    Vector2 origin;
-    bool isCollected;
-} Collectible;
-
-typedef struct
-{
-    Player player;
-    std::vector<Platform> platforms;
-    std::vector<Collectible> collectibles;
-    Collectible *selectedCollectible;
-} Scene;
-Scene scene;
-
-typedef struct
-{
-    Texture2D spriteSheet;
-    Rectangle srcPlatform;
-    Rectangle srcPlayer;
-    Rectangle srcCollectible;
-} SpriteCollection;
-SpriteCollection spriteCollection;
-
-enum class Mode
-{
-    Play,
-    Edit
-};
-
-typedef struct {
-    Rectangle rect;
-    Vector2 origin;
-    bool isSelected;
-} Button;
-
-typedef struct {
-    std::vector<Button> buttons;
-    int buttonSelected;
-} Editor;
-
-typedef struct
-{
-    Mode currentMode;
-    Editor editor;
-} Game;
-Game game;
+#include "common.hh"
 
 // ================================================================================================
+
+void saveLevelFile(std::vector<Collectible> &collectibles)
+{
+    std::string output;
+    for (auto c : collectibles) {
+        output += std::to_string(static_cast<int>(c.rec.x));
+        output += ", ";
+        output += std::to_string(static_cast<int>(c.rec.y));
+        output += '\n';
+    }
+
+    std::vector<char> cstr(output.begin(), output.end());
+    cstr.push_back('\0');
+
+    SaveFileText("level.csv", cstr.data());
+}
+
+void loadLevelFile(std::vector<Collectible> &collectibles)
+{
+    char *fileToString = LoadFileText("level.csv");
+
+    if (!fileToString) {
+        std::vector<Collectible> defaultCollectibles;
+        defaultCollectibles.push_back(Collectible { (float) 440, (float) 670 });
+        defaultCollectibles.push_back(Collectible { (float) 540, (float) 670 });
+        defaultCollectibles.push_back(Collectible { (float) 640, (float) 670 });
+        defaultCollectibles.push_back(Collectible { (float) 740, (float) 670 });
+        defaultCollectibles.push_back(Collectible { (float) 840, (float) 670 });
+
+        saveLevelFile(defaultCollectibles);
+
+        fileToString = LoadFileText("level.csv");
+    }
+
+    std::istringstream stream(fileToString);
+    int coordinate_x, coordinate_y;
+    char comma;
+    std::string buffer;
+    while (std::getline(stream, buffer)) {
+        std::istringstream line(buffer);
+        line >> coordinate_x >> comma >> coordinate_y;
+        collectibles.push_back(Collectible { (float) coordinate_x, (float) coordinate_y });
+    }
+
+    UnloadFileText(fileToString);
+}
 
 void Init()
 {
@@ -96,7 +61,8 @@ void Init()
 
     game.currentMode = Mode::Play;
 
-    spriteCollection.spriteSheet = LoadTexture("resources/monkeylad_further.png");
+    spriteCollection.spriteSheet = LoadTexture("assets/monkeylad_further.png");
+    spriteCollection.iconsSpriteSheet = LoadTexture("assets/icons.png");
 
     spriteCollection.srcPlayer = {448, 208, 16, 24};
     short scalePlayer = 3;
@@ -130,13 +96,11 @@ void Init()
           spriteCollection.srcPlatform.height * scalePlatform}},
     };
 
+    loadLevelFile(scene.collectibles);
+
     spriteCollection.srcCollectible = {592, 352, 16, 16};
     short int scaleCollectible = 2;
-    scene.collectibles = {{{440, SCREEN_HEIGHT - 50.f}},
-                          {{540, SCREEN_HEIGHT - 50.f}},
-                          {{640, SCREEN_HEIGHT - 50.f}},
-                          {{740, SCREEN_HEIGHT - 50.f}},
-                          {{840, SCREEN_HEIGHT - 50.f}}};
+
     for (auto &c : scene.collectibles) {
         c.rec.width = spriteCollection.srcCollectible.width * scaleCollectible;
         c.rec.height = spriteCollection.srcCollectible.height * scaleCollectible;
@@ -146,10 +110,21 @@ void Init()
     scene.selectedCollectible = nullptr;
 
     Button collectibleButton;
-    collectibleButton.isSelected = false;
+    collectibleButton.texture = &spriteCollection.spriteSheet;
+    collectibleButton.source = {592, 352, 16, 16};
     collectibleButton.origin = { 25, 50 };
-    collectibleButton.rect = { SCREEN_WIDTH / 2, 60, spriteCollection.srcCollectible.width * 3, spriteCollection.srcCollectible.height * 3 };
+    collectibleButton.destination = { SCREEN_WIDTH / 2, 60, 60, 60 };
+    collectibleButton.isSelected = false;
     game.editor.buttons.push_back(collectibleButton);
+
+    Button saveButton;
+    saveButton.texture = &spriteCollection.iconsSpriteSheet;
+    saveButton.source = { 1194, 1095, 60, 65 };
+    saveButton.origin = { 25, 50 };
+    saveButton.destination = { (SCREEN_WIDTH / 2) + 60, 60, 60, 60 };
+    saveButton.isSelected = false;
+    game.editor.buttons.push_back(saveButton);
+
     game.editor.buttonSelected = -1;
 }
 
@@ -383,7 +358,7 @@ void Update()
         if (IsMouseButtonPressed(MOUSE_BUTTON_LEFT)) {
             int i = 0;
             for (auto &b : game.editor.buttons) {
-                if (CheckCollisionPointRec({(float)GetMouseX(), (float)GetMouseY()}, { b.rect.x - b.origin.x, b.rect.y - b.origin.y, b.rect.width, b.rect.height })) {
+                if (CheckCollisionPointRec({(float)GetMouseX(), (float)GetMouseY()}, { b.destination.x - b.origin.x, b.destination.y - b.origin.y, b.destination.width, b.destination.height })) {
                     if (b.isSelected) {
                         b.isSelected = false;
                         game.editor.buttonSelected = -1;
@@ -398,7 +373,7 @@ void Update()
                 ++i;
             }
 
-            if (!buttonStateChange && game.editor.buttonSelected != -1) {
+            if (!buttonStateChange && game.editor.buttonSelected == 0) {
                 Collectible c;
                 c.rec = { (float)GetMouseX(), (float)GetMouseY() };
                 c.rec.width = spriteCollection.srcCollectible.width * 2;
@@ -406,6 +381,14 @@ void Update()
                 c.origin = {c.rec.width / 2, c.rec.height};
                 c.isCollected = false;
                 scene.collectibles.push_back(c);
+            }
+
+            if (game.editor.buttonSelected == 1) {
+                saveLevelFile(scene.collectibles);
+
+                Button &b = game.editor.buttons.at(game.editor.buttonSelected);
+                b.isSelected = false;
+                game.editor.buttonSelected = -1;
             }
         }
 
@@ -425,25 +408,19 @@ void Draw()
 {
     BeginDrawing();
 
+    // Environment
     ClearBackground(SKYBLUE);
 
-    // Ground
     auto g = scene.platforms.at(0);
     Rectangle groundDraw = {g.rec.x - (g.rec.width / 2), g.rec.y - g.rec.height, g.rec.width, g.rec.height};
     DrawRectangleRec(groundDraw, LIME);
 
-    // Platforms
     auto subset = scene.platforms | std::views::drop(1) | std::views::take(scene.platforms.size() - 1);
     for (auto p : subset) {
         DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcPlatform, p.rec,
                        {p.rec.width / 2, p.rec.height}, 0, WHITE);
     }
 
-    // Player
-    Rectangle playerDraw = {scene.player.position.x, scene.player.position.y, scene.player.width, scene.player.height};
-    DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcPlayer, playerDraw, scene.player.origin, 0, WHITE);
-
-    // Collectibles
     for (auto c : scene.collectibles) {
         if (!c.isCollected) {
             DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcCollectible, c.rec, c.origin, 0, WHITE);
@@ -453,23 +430,22 @@ void Draw()
         }
     }
 
+    // Player
+    Rectangle playerDraw = {scene.player.position.x, scene.player.position.y, scene.player.width, scene.player.height};
+    DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcPlayer, playerDraw, scene.player.origin, 0, WHITE);
+
     // UI
     if (game.currentMode == Mode::Play) {
         DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart\n'e' to enter edit mode", 30, 30, 30, YELLOW);
         DrawText(std::format("Score: {}", scene.player.score).c_str(), SCREEN_WIDTH - 200, 30, 30, YELLOW);
-
-        if (scene.selectedCollectible) {
-            DrawText(std::format("{} - {}", (*scene.selectedCollectible).rec.x, (*scene.selectedCollectible).rec.y).c_str(),
-                    SCREEN_WIDTH - 150, SCREEN_HEIGHT / 2, 20, BLACK);
-        }
     }
 
     if (game.currentMode == Mode::Edit) {
         DrawText("Edit Mode\n(press 'e' to exit)", 30, 30, 30, BLACK);
 
         for (auto &button : game.editor.buttons) {
-            DrawRectanglePro(button.rect, button.origin, 0, (button.isSelected ? RED : PINK));
-            DrawTexturePro(spriteCollection.spriteSheet, spriteCollection.srcCollectible, button.rect, button.origin, 0, WHITE);
+            DrawRectanglePro(button.destination, button.origin, 0, (button.isSelected ? RED : PINK));
+            DrawTexturePro(*(button.texture), button.source, button.destination, button.origin, 0, WHITE);
         }
     }
 
@@ -481,6 +457,7 @@ void Draw()
 void Close()
 {
     UnloadTexture(spriteCollection.spriteSheet);
+    UnloadTexture(spriteCollection.iconsSpriteSheet);
     CloseWindow();
 }
 

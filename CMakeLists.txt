@@ -16,19 +16,9 @@ if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Debug CACHE STRING "Set build type to Debug or Release" FORCE)
 endif()
 
-# include(FetchContent)
-# set(FETCHCONTENT_QUIET FALSE)
-
-# Raylib
-# set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE) # don't build the supplied examples
-# set(BUILD_GAMES    OFF CACHE BOOL "" FORCE) # don't build the supplied example games
-# FetchContent_Declare(
-#   raylib
-#   GIT_REPOSITORY "https://github.com/raysan5/raylib.git"
-#   GIT_TAG "5.5"
-#   GIT_PROGRESS TRUE
-# )
-# FetchContent_MakeAvailable(raylib)
+find_package(raylib REQUIRED)
+find_package(OpenGL REQUIRED)
+find_package(X11 REQUIRED)
 
 # Adding our source files
 file(GLOB_RECURSE PROJECT_SOURCES CONFIGURE_DEPENDS "${CMAKE_CURRENT_LIST_DIR}/src/*.cc")
@@ -39,7 +29,7 @@ add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE ${PROJECT_SOURCES})
 target_include_directories(${PROJECT_NAME} PRIVATE ${PROJECT_INCLUDE})
 
-if (LINUX)
+if (UNIX)
   target_link_libraries(${PROJECT_NAME}
     raylib
     m

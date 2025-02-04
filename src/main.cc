@@ -50,7 +50,6 @@ void loadLevelFile(std::vector<Collectible> &collectibles)
         line >> coordinate_x >> comma >> coordinate_y;
         collectibles.push_back(Collectible { (float) coordinate_x, (float) coordinate_y });
     }
-
     UnloadFileText(fileToString);
 }
 

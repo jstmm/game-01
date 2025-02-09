@@ -1,9 +1,18 @@
 ---
-BasedOnStyle: Microsoft
-BraceWrapping:
-  AfterClass: true
-  AfterStruct: true
-  AfterEnum: true
-  AfterFunction: true
-  AfterControlStatement: false
+BasedOnStyle: LLVM
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 100
+BreakBeforeBraces: Attach
+AllowShortFunctionsOnASingleLine: None
+PointerAlignment: Left
+AlwaysBreakTemplateDeclarations: Yes
+SpacesBeforeTrailingComments: 1
+BinPackParameters: false
+BinPackArguments: false
+AllowShortBlocksOnASingleLine: Never
+SortIncludes: false
+BreakConstructorInitializers: AfterColon
+BreakBeforeTernaryOperators: True
+BreakBeforeBinaryOperators: NonAssignment
 ---

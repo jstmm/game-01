@@ -15,3 +15,9 @@ add_executable(${PROJECT_NAME} src/main.cc)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
 # target_link_libraries(${PROJECT_NAME} PRIVATE raylib ${X11_LIBRARIES} m pthread dl rt)
+
+add_custom_target(copy_assets ALL
+  COMMAND ${CMAKE_COMMAND} -E copy_directory
+      ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
+  COMMENT "Copying assets to build directory"
+)

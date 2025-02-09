@@ -7,7 +7,7 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/game",
       "stopAtEntry": false,
-      "cwd": "${workspaceFolder}",
+      "cwd": "${workspaceFolder}/build",
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",

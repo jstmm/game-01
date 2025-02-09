@@ -3,6 +3,14 @@
 #include <ranges>
 #include <vector>
 #include <sstream>
+#include <filesystem>
+
+#if defined(_WIN32) || defined(_WIN64)
+    #include <windows.h>
+    #include <shlobj.h>  // For getting the executable path on Windows
+#else
+    #include <unistd.h>
+#endif
 
 #include "common.hh"
 
@@ -11,6 +19,20 @@
 Scene scene;
 SpriteCollection spriteCollection;
 Game game;
+
+std::string get_executable_directory() {
+#if defined(_WIN32) || defined(_WIN64)
+    // Windows-specific code to get the executable directory
+    char buffer[MAX_PATH];
+    GetModuleFileNameA(NULL, buffer, MAX_PATH);
+    std::filesystem::path exe_path(buffer);
+    return exe_path.parent_path().string();
+#else
+    // Unix-like (Linux/macOS) code to get the executable directory
+    std::filesystem::path exe_path = std::filesystem::read_symlink("/proc/self/exe");
+    return exe_path.parent_path().string();
+#endif
+}
 
 void saveLevelFile(std::vector<Collectible> &collectibles)
 {
@@ -25,12 +47,18 @@ void saveLevelFile(std::vector<Collectible> &collectibles)
     std::vector<char> cstr(output.begin(), output.end());
     cstr.push_back('\0');
 
-    SaveFileText("level.csv", cstr.data());
+    std::string exe_dir = get_executable_directory();
+    std::string file_path = exe_dir + "/level.csv";
+
+    SaveFileText(file_path.c_str(), cstr.data());
 }
 
 void loadLevelFile(std::vector<Collectible> &collectibles)
 {
-    char *fileToString = LoadFileText("level.csv");
+    std::string exe_dir = get_executable_directory();
+    std::string file_path = exe_dir + "/level.csv";
+
+    char *fileToString = LoadFileText(file_path.c_str());
 
     if (!fileToString) {
         std::vector<Collectible> defaultCollectibles;
@@ -42,7 +70,10 @@ void loadLevelFile(std::vector<Collectible> &collectibles)
 
         saveLevelFile(defaultCollectibles);
 
-        fileToString = LoadFileText("level.csv");
+
+        std::string file_path = exe_dir + "/level.csv";
+
+        fileToString = LoadFileText(file_path.c_str());
     }
 
     std::istringstream stream(fileToString);

@@ -1,12 +1,14 @@
 #pragma once
 
+#include "raylib.h"
+
+#include <vector>
+
 #define GRAVITY 600
 #define PLAYER_JUMP_SPD 400.0f
 #define PLAYER_HOR_SPD 400.0f
 #define SCREEN_WIDTH 1280.0f
 #define SCREEN_HEIGHT 720.0f
-
-#include "raylib.h"
 
 enum class State
 {
@@ -48,7 +50,7 @@ typedef struct
     bool isCollected;
 } Collectible;
 
-typedef struct
+typedef struct Scene
 {
     Player player;
     std::vector<Platform> platforms;
@@ -83,7 +85,3 @@ typedef struct
     Mode currentMode;
     Editor editor;
 } Game;
-
-Scene scene;
-SpriteCollection spriteCollection;
-Game game;

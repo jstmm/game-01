@@ -1,5 +1,5 @@
+#include <cstddef>
 #include <iostream>
-#include <memory>
 #include <ranges>
 #include <vector>
 #include <sstream>
@@ -7,6 +7,10 @@
 #include "common.hh"
 
 // ================================================================================================
+
+Scene scene;
+SpriteCollection spriteCollection;
+Game game;
 
 void saveLevelFile(std::vector<Collectible> &collectibles)
 {
@@ -266,7 +270,7 @@ int imageRefForTimeInWalkingState(const int time)
     int duration = imageRefs.size() * timePerImage;
     int result;
 
-    for (int i = 0; i < imageRefs.size(); ++i) {
+    for (size_t i = 0; i < imageRefs.size(); ++i) {
         if ((time % duration) < (timePerImage * (i + 1))) {
             result = imageRefs.at(i);
             break;

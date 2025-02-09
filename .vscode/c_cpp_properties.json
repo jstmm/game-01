@@ -3,10 +3,11 @@
         {
             "name": "Linux",
             "includePath": [
+                "/home/linuxbrew/.linuxbrew/Cellar/raylib/5.5",
                 "${workspaceFolder}/**"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/gcc",
+            "compilerPath": "/home/linuxbrew/.linuxbrew/bin/g++",
             "intelliSenseMode": "linux-gcc-x64",
             "compileCommands": "${workspaceFolder}/build/compile_commands.json"
         }

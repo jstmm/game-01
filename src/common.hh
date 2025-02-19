@@ -15,10 +15,8 @@ enum class State { Idle, MovingLeft, MovingRight };
 enum class Mode { Play, Edit };
 
 typedef struct {
-    float width;
-    float height;
+    Rectangle rec;
     Vector2 origin;
-    Vector2 position;
     State state;
     float speed;
     bool can_jump;
@@ -30,6 +28,7 @@ typedef struct {
 
 typedef struct {
     Rectangle rec;
+    Vector2 origin;
 } Platform;
 
 typedef struct {
@@ -70,4 +69,5 @@ typedef struct {
     Mode current_mode;
     Editor editor;
     bool is_running = true;
+    bool show_origins = false;
 } Game;

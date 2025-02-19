@@ -6,16 +6,17 @@
 #include <filesystem>
 
 #if defined(_WIN32) || defined(_WIN64)
-#include <windows.h>
-#include <shlobj.h> // For getting the executable path on Windows
+    #include <windows.h>
+    #include <shlobj.h> // For getting the executable path on Windows
 #else
-#include <unistd.h>
+    #include <unistd.h>
 #endif
 
 #include "common.hh"
 
 // ================================================================================================
 
+Game game;
 Scene scene;
 SpriteCollection sprite_collection;
 
@@ -84,7 +85,7 @@ void load_level_file(std::vector<Collectible>& collectibles) {
     UnloadFileText(file_to_string);
 }
 
-void init(Game& game) {
+void init() {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
     SetTargetFPS(60);
 
@@ -96,13 +97,16 @@ void init(Game& game) {
     sprite_collection.src_player = {448, 208, 16, 24};
     short scale_player = 3;
     Player player;
-    player.position = (Vector2){75.f, 600.f};
-    player.width = sprite_collection.src_player.width * scale_player;
-    player.height = sprite_collection.src_player.height * scale_player;
+    player.rec = {
+        .x = 75.f,
+        .y = 600.f,
+        .width = sprite_collection.src_player.width * scale_player,
+        .height = sprite_collection.src_player.height * scale_player
+    };
     player.speed = 0;
     player.can_jump = false;
     player.state = State::Idle;
-    player.origin = {player.width / 2, player.height};
+    player.origin = {player.rec.width / 2, player.rec.height};
     player.current_image = 0;
     player.time_in_idle_state = 0;
     player.time_in_walking_state = 0;
@@ -134,6 +138,13 @@ void init(Game& game) {
           sprite_collection.src_platform.width * scale_platform,
           sprite_collection.src_platform.height * scale_platform}},
     };
+
+    for (auto& platform : scene.platforms) {
+        platform.origin = {
+            .x = platform.rec.width / 2,
+            .y = platform.rec.height
+        };
+    }
 
     load_level_file(scene.collectibles);
 
@@ -169,7 +180,7 @@ void init(Game& game) {
 
 // ================================================================================================
 
-void update_user_state(Game& game) {
+void update_user_state() {
     if (WindowShouldClose() || IsKeyPressed(KEY_Q)) {
         game.is_running = false;
         return;
@@ -177,8 +188,8 @@ void update_user_state(Game& game) {
 
     if (game.current_mode == Mode::Play) {
         if (IsKeyPressed(KEY_R)) {
-            scene.player.position.x = 75.f;
-            scene.player.position.y = 600.f;
+            scene.player.rec.x = 75.f;
+            scene.player.rec.y = 600.f;
             scene.player.state = State::Idle;
             scene.player.speed = 0;
             scene.player.can_jump = false;
@@ -250,6 +261,11 @@ void update_user_state(Game& game) {
         if (IsKeyPressed(KEY_E)) {
             game.current_mode = Mode::Edit;
         }
+
+        if (IsKeyPressed(KEY_O)) {
+            game.show_origins = !game.show_origins;
+        }
+
         return;
     }
 
@@ -263,43 +279,43 @@ void update_user_state(Game& game) {
 
 void update_player_position() {
     const float delta_time = GetFrameTime();
-    const float minX = scene.player.width / 2;
-    const float maxX = SCREEN_WIDTH - (scene.player.width / 2);
+    const float minX = scene.player.rec.width / 2;
+    const float maxX = SCREEN_WIDTH - (scene.player.rec.width / 2);
 
     bool hit_obstacle = false;
 
     if (scene.player.state == State::MovingLeft)
-        scene.player.position.x -= PLAYER_HOR_SPD * delta_time;
+        scene.player.rec.x -= PLAYER_HOR_SPD * delta_time;
 
     if (scene.player.state == State::MovingRight) {
-        scene.player.position.x += PLAYER_HOR_SPD * delta_time;
+        scene.player.rec.x += PLAYER_HOR_SPD * delta_time;
     }
 
     for (Platform& i : scene.platforms) {
-        if ((i.rec.x - (i.rec.width / 2) <= scene.player.position.x + (scene.player.width / 2))
-            && (scene.player.position.x - (scene.player.width / 2) <= i.rec.x + (i.rec.width / 2))
-            && (scene.player.position.y <= i.rec.y - i.rec.height)
-            && (scene.player.position.y + (scene.player.speed * delta_time)
+        if ((i.rec.x - (i.rec.width / 2) <= scene.player.rec.x + (scene.player.rec.width / 2))
+            && (scene.player.rec.x - (scene.player.rec.width / 2) <= i.rec.x + (i.rec.width / 2))
+            && (scene.player.rec.y <= i.rec.y - i.rec.height)
+            && (scene.player.rec.y + (scene.player.speed * delta_time)
                 >= i.rec.y - i.rec.height)) {
             hit_obstacle = true;
             scene.player.speed = 0.0f;
-            scene.player.position.y = i.rec.y - i.rec.height;
+            scene.player.rec.y = i.rec.y - i.rec.height;
             break;
         }
     }
 
     if (!hit_obstacle) {
-        scene.player.position.y += scene.player.speed * delta_time;
+        scene.player.rec.y += scene.player.speed * delta_time;
         scene.player.speed += GRAVITY * delta_time;
         scene.player.can_jump = false;
     } else {
         scene.player.can_jump = true;
     }
 
-    if (scene.player.position.x <= minX)
-        scene.player.position.x = minX;
-    if (scene.player.position.x >= maxX)
-        scene.player.position.x = maxX;
+    if (scene.player.rec.x <= minX)
+        scene.player.rec.x = minX;
+    if (scene.player.rec.x >= maxX)
+        scene.player.rec.x = maxX;
 }
 
 int image_ref_for_time_in_walking_state(const int time) {
@@ -348,7 +364,16 @@ void update_player_image(Player& player, Rectangle& src_player, int player_width
     }
 }
 
-void update(Game& game) {
+Rectangle apply_transform(auto c) {
+    return Rectangle {
+        .x =      c.rec.x - c.origin.x,
+        .y =      c.rec.y - c.origin.y,
+        .width =  c.rec.width,
+        .height = c.rec.height
+    };
+}
+
+void update() {
     float player_width = 16;
     std::vector<Vector2> monkeys = {
         {448, 208},
@@ -358,18 +383,15 @@ void update(Game& game) {
         {512, 208},
         {528, 208},
     };
-    update_user_state(game);
+    update_user_state();
     update_player_position();
     update_player_image(scene.player, sprite_collection.src_player, player_width);
     sprite_collection.src_player.x = monkeys.at(scene.player.current_image).x;
     sprite_collection.src_player.y = monkeys.at(scene.player.current_image).y;
 
     for (auto& c : scene.collectibles) {
-        Rectangle col_d = {c.rec.x - c.origin.x, c.rec.y - c.origin.y, c.rec.width, c.rec.height};
-        Rectangle player_d = {scene.player.position.x - scene.player.origin.x,
-                             scene.player.position.y - scene.player.origin.y,
-                             scene.player.width,
-                             scene.player.height};
+        Rectangle col_d = apply_transform(c);
+        Rectangle player_d = apply_transform(scene.player);
 
         if (game.current_mode == Mode::Play) {
             if (CheckCollisionRecs(col_d, player_d) && !c.is_collected) {
@@ -452,26 +474,37 @@ void update(Game& game) {
 
 // ================================================================================================
 
-void draw(Game& game) {
+void draw_origin(Rectangle rec) {
+    if (!game.show_origins) {
+        return;
+    };
+    float width = 10, height = 10;
+    DrawRectanglePro({
+        .x = rec.x - (width/2),
+        .y = rec.y - (height/2),
+        .width = width,
+        .height = height
+    }, { 0, 0 }, 0, RED);
+}
+
+void draw() {
     BeginDrawing();
 
     // Environment
     ClearBackground(SKYBLUE);
 
-    auto g = scene.platforms.at(0);
-    Rectangle ground_draw = {
-        g.rec.x - (g.rec.width / 2), g.rec.y - g.rec.height, g.rec.width, g.rec.height};
-    DrawRectangleRec(ground_draw, LIME);
+    auto ground = scene.platforms.at(0);
+    DrawRectanglePro(ground.rec, ground.origin, 0, LIME);
+    draw_origin(ground.rec);
 
-    auto subset =
-        scene.platforms | std::views::drop(1) | std::views::take(scene.platforms.size() - 1);
-    for (auto p : subset) {
+    for (auto platform : scene.platforms | std::views::drop(1) | std::views::take(scene.platforms.size() - 1)) {
         DrawTexturePro(sprite_collection.sprite_sheet,
                        sprite_collection.src_platform,
-                       p.rec,
-                       {p.rec.width / 2, p.rec.height},
+                       platform.rec,
+                       platform.origin,
                        0,
                        WHITE);
+        draw_origin(platform.rec);
     }
 
     for (auto c : scene.collectibles) {
@@ -488,22 +521,22 @@ void draw(Game& game) {
                     1.f,
                     BLACK);
             }
+            draw_origin(c.rec);
         }
     }
 
     // Player
-    Rectangle player_draw = {
-        scene.player.position.x, scene.player.position.y, scene.player.width, scene.player.height};
     DrawTexturePro(sprite_collection.sprite_sheet,
                    sprite_collection.src_player,
-                   player_draw,
+                   scene.player.rec,
                    scene.player.origin,
                    0,
                    WHITE);
+    draw_origin(scene.player.rec);
 
     // UI
     if (game.current_mode == Mode::Play) {
-        DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart\n'e' to enter edit mode",
+        DrawText("Arrow keys for moving\nSpace key to jump\n'r' to restart\n'e' to enter edit mode\n'o' to view origins",
                  30,
                  30,
                  30,
@@ -540,15 +573,11 @@ void close() {
 // ================================================================================================
 
 int main() {
-    Game game;
-    init(game);
-
+    init();
     while (game.is_running) {
-        update(game);
-        draw(game);
+        update();
+        draw();
     }
-
     close();
-
     return 0;
 }

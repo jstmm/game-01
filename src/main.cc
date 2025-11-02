@@ -1,5 +1,7 @@
 #include <cstddef>
 #include <iostream>
+#include <format>
+#include <string>
 #include <ranges>
 #include <vector>
 #include <sstream>
@@ -34,8 +36,8 @@ std::string get_executable_directory() {
 #endif
 }
 
-void save_level_file(std::vector<Collectible>& collectibles) {
-    std::string output;
+auto save_level_file(std::vector<Collectible>& collectibles) -> void {
+    auto output = std::string{};
     for (auto c : collectibles) {
         output += std::to_string(static_cast<int>(c.rec.x));
         output += ", ";
@@ -52,14 +54,14 @@ void save_level_file(std::vector<Collectible>& collectibles) {
     SaveFileText(file_path.c_str(), cstr.data());
 }
 
-void load_level_file(std::vector<Collectible>& collectibles) {
+auto load_level_file(std::vector<Collectible>& collectibles) -> void {
     std::string exe_dir = get_executable_directory();
-    std::string file_path = exe_dir + "/level.csv";
+    auto file_path = exe_dir + "/level.csv";
 
     char* file_to_string = LoadFileText(file_path.c_str());
 
     if (!file_to_string) {
-        std::vector<Collectible> default_collectibles;
+        auto default_collectibles = std::vector<Collectible>();
         default_collectibles.push_back(Collectible{(float)440, (float)670});
         default_collectibles.push_back(Collectible{(float)540, (float)670});
         default_collectibles.push_back(Collectible{(float)640, (float)670});
@@ -67,9 +69,7 @@ void load_level_file(std::vector<Collectible>& collectibles) {
         default_collectibles.push_back(Collectible{(float)840, (float)670});
 
         save_level_file(default_collectibles);
-
-        std::string file_path = exe_dir + "/level.csv";
-
+        auto file_path = exe_dir + "/level.csv";
         file_to_string = LoadFileText(file_path.c_str());
     }
 
@@ -85,7 +85,7 @@ void load_level_file(std::vector<Collectible>& collectibles) {
     UnloadFileText(file_to_string);
 }
 
-void init() {
+auto init() -> void {
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
     SetTargetFPS(60);
 
@@ -96,22 +96,24 @@ void init() {
 
     sprite_collection.src_player = {448, 208, 16, 24};
     short scale_player = 3;
-    Player player;
-    player.rec = {
-        .x = 75.f,
-        .y = 600.f,
-        .width = sprite_collection.src_player.width * scale_player,
-        .height = sprite_collection.src_player.height * scale_player
+    auto player_width = sprite_collection.src_player.width * scale_player;
+    auto player_height = sprite_collection.src_player.height * scale_player;
+    scene.player = Player {
+        .rec = {
+            .x = 75.f,
+            .y = 600.f,
+            .width = player_width,
+            .height = player_height
+        },
+        .origin = {player_width / 2, player_height},
+        .state = State::Idle,
+        .speed = 0,
+        .can_jump = false,
+        .current_image = 0,
+        .time_in_idle_state = 0,
+        .time_in_walking_state = 0,
+        .score = 0,
     };
-    player.speed = 0;
-    player.can_jump = false;
-    player.state = State::Idle;
-    player.origin = {player.rec.width / 2, player.rec.height};
-    player.current_image = 0;
-    player.time_in_idle_state = 0;
-    player.time_in_walking_state = 0;
-    player.score = 0;
-    scene.player = player;
 
     sprite_collection.src_platform = {448, 33, 47, 8};
     short int scale_platform = 2;
@@ -180,7 +182,7 @@ void init() {
 
 // ================================================================================================
 
-void update_user_state() {
+auto update_user_state() -> void {
     if (WindowShouldClose() || IsKeyPressed(KEY_Q)) {
         game.is_running = false;
         return;
@@ -277,7 +279,7 @@ void update_user_state() {
     }
 }
 
-void update_player_position() {
+auto update_player_position() -> void {
     const float delta_time = GetFrameTime();
     const float minX = scene.player.rec.width / 2;
     const float maxX = SCREEN_WIDTH - (scene.player.rec.width / 2);
@@ -318,8 +320,8 @@ void update_player_position() {
         scene.player.rec.x = maxX;
 }
 
-int image_ref_for_time_in_walking_state(const int time) {
-    std::vector<int> image_refs = {2, 3, 4, 5};
+auto image_ref_for_time_in_walking_state(const int time) -> int {
+    auto image_refs = std::vector<int>{2, 3, 4, 5};
     int time_per_image = 6;
 
     int duration = image_refs.size() * time_per_image;
@@ -334,7 +336,7 @@ int image_ref_for_time_in_walking_state(const int time) {
     return result;
 }
 
-void update_player_image(Player& player, Rectangle& src_player, int player_width) {
+auto update_player_image(Player& player, Rectangle& src_player, int player_width) -> void {
     if (!player.can_jump) {
         player.current_image = 3;
         src_player.width = (player.state == State::MovingLeft)    ? -player_width
@@ -364,7 +366,7 @@ void update_player_image(Player& player, Rectangle& src_player, int player_width
     }
 }
 
-Rectangle apply_transform(auto c) {
+auto apply_transform(auto c) -> Rectangle {
     return Rectangle {
         .x =      c.rec.x - c.origin.x,
         .y =      c.rec.y - c.origin.y,
@@ -373,9 +375,9 @@ Rectangle apply_transform(auto c) {
     };
 }
 
-void update() {
+auto update() -> void {
     float player_width = 16;
-    std::vector<Vector2> monkeys = {
+    auto monkeys = std::vector<Vector2> {
         {448, 208},
         {464, 208},
         {480, 208},
@@ -474,7 +476,7 @@ void update() {
 
 // ================================================================================================
 
-void draw_origin(Rectangle rec) {
+auto draw_origin(Rectangle rec) -> void {
     if (!game.show_origins) {
         return;
     };
@@ -487,7 +489,7 @@ void draw_origin(Rectangle rec) {
     }, { 0, 0 }, 0, RED);
 }
 
-void draw() {
+auto draw() -> void {
     BeginDrawing();
 
     // Environment
@@ -564,7 +566,7 @@ void draw() {
 
 // ================================================================================================
 
-void close() {
+auto close() -> void {
     UnloadTexture(sprite_collection.sprite_sheet);
     UnloadTexture(sprite_collection.icons_sprite_sheet);
     CloseWindow();
@@ -572,12 +574,11 @@ void close() {
 
 // ================================================================================================
 
-int main() {
+auto main() -> int {
     init();
     while (game.is_running) {
         update();
         draw();
     }
     close();
-    return 0;
 }

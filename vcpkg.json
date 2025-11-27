@@ -1,0 +1,9 @@
+{
+  "name" : "game",
+  "version-string" : "1.0.0",
+  "builtin-baseline" : "75cdbf55732bc8f36e8286d0254feb8083a6dd2a",
+  "dependencies" : [ {
+    "name" : "raylib",
+    "version>=" : "5.5#1"
+  } ]
+}

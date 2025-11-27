@@ -7,38 +7,18 @@
 #include <sstream>
 #include <filesystem>
 
-#if defined(_WIN32) || defined(_WIN64)
-    #include <windows.h>
-    #include <shlobj.h> // For getting the executable path on Windows
-#else
-    #include <unistd.h>
-#endif
-
-#include "common.hh"
+#include "common.h"
 
 // ================================================================================================
 
-Game game;
-Scene scene;
-SpriteCollection sprite_collection;
+static Game game;
+static Scene scene;
+static SpriteCollection sprite_collection;
 
-std::string get_executable_directory() {
-#if defined(_WIN32) || defined(_WIN64)
-    // Windows-specific code to get the executable directory
-    char buffer[MAX_PATH];
-    GetModuleFileNameA(NULL, buffer, MAX_PATH);
-    std::filesystem::path exe_path(buffer);
-    return exe_path.parent_path().string();
-#else
-    // Unix-like (Linux/macOS) code to get the executable directory
-    std::filesystem::path exe_path = std::filesystem::read_symlink("/proc/self/exe");
-    return exe_path.parent_path().string();
-#endif
-}
-
-auto save_level_file(std::vector<Collectible>& collectibles) -> void {
-    auto output = std::string{};
-    for (auto c : collectibles) {
+void save_level_file(const std::vector<Collectible>& collectibles)
+{
+    std::string output;
+    for (Collectible c : collectibles) {
         output += std::to_string(static_cast<int>(c.rec.x));
         output += ", ";
         output += std::to_string(static_cast<int>(c.rec.y));
@@ -48,29 +28,23 @@ auto save_level_file(std::vector<Collectible>& collectibles) -> void {
     std::vector<char> cstr(output.begin(), output.end());
     cstr.push_back('\0');
 
-    std::string exe_dir = get_executable_directory();
-    std::string file_path = exe_dir + "/level.csv";
-
-    SaveFileText(file_path.c_str(), cstr.data());
+    SaveFileText("level.csv", cstr.data());
 }
 
-auto load_level_file(std::vector<Collectible>& collectibles) -> void {
-    std::string exe_dir = get_executable_directory();
-    auto file_path = exe_dir + "/level.csv";
-
-    char* file_to_string = LoadFileText(file_path.c_str());
+void load_level_file(std::vector<Collectible>& collectibles)
+{
+    char* file_to_string = LoadFileText("level.csv");
 
     if (!file_to_string) {
-        auto default_collectibles = std::vector<Collectible>();
-        default_collectibles.push_back(Collectible{(float)440, (float)670});
-        default_collectibles.push_back(Collectible{(float)540, (float)670});
-        default_collectibles.push_back(Collectible{(float)640, (float)670});
-        default_collectibles.push_back(Collectible{(float)740, (float)670});
-        default_collectibles.push_back(Collectible{(float)840, (float)670});
-
+        std::vector<Collectible> default_collectibles {
+            { 440.f, 670.f },
+            { 540.f, 670.f },
+            { 640.f, 670.f },
+            { 740.f, 670.f },
+            { 840.f, 670.f }
+        };
         save_level_file(default_collectibles);
-        auto file_path = exe_dir + "/level.csv";
-        file_to_string = LoadFileText(file_path.c_str());
+        file_to_string = LoadFileText("level.csv");
     }
 
     std::istringstream stream(file_to_string);
@@ -80,12 +54,13 @@ auto load_level_file(std::vector<Collectible>& collectibles) -> void {
     while (std::getline(stream, buffer)) {
         std::istringstream line(buffer);
         line >> coordinate_x >> comma >> coordinate_y;
-        collectibles.push_back(Collectible{(float)coordinate_x, (float)coordinate_y});
+        collectibles.push_back({ static_cast<float>(coordinate_x), static_cast<float>(coordinate_y) });
     }
     UnloadFileText(file_to_string);
 }
 
-auto init() -> void {
+void init()
+{
     InitWindow(SCREEN_WIDTH, SCREEN_HEIGHT, "Game 01");
     SetTargetFPS(60);
 
@@ -95,9 +70,9 @@ auto init() -> void {
     sprite_collection.icons_sprite_sheet = LoadTexture("assets/icons.png");
 
     sprite_collection.src_player = {448, 208, 16, 24};
-    short scale_player = 3;
-    auto player_width = sprite_collection.src_player.width * scale_player;
-    auto player_height = sprite_collection.src_player.height * scale_player;
+    float scale_player = 3.f;
+    float player_width = sprite_collection.src_player.width * scale_player;
+    float player_height = sprite_collection.src_player.height * scale_player;
     scene.player = Player {
         .rec = {
             .x = 75.f,
@@ -116,7 +91,7 @@ auto init() -> void {
     };
 
     sprite_collection.src_platform = {448, 33, 47, 8};
-    short int scale_platform = 2;
+    float scale_platform = 2.f;
     scene.platforms = {
         {{SCREEN_WIDTH / 2, SCREEN_HEIGHT, SCREEN_WIDTH, 50.f}},
         {{200.f,
@@ -151,7 +126,7 @@ auto init() -> void {
     load_level_file(scene.collectibles);
 
     sprite_collection.src_collectible = {592, 352, 16, 16};
-    short int scale_collectible = 2;
+    float scale_collectible = 2.f;
 
     for (auto& c : scene.collectibles) {
         c.rec.width = sprite_collection.src_collectible.width * scale_collectible;
@@ -161,20 +136,22 @@ auto init() -> void {
     }
     scene.selected_collectible = nullptr;
 
-    Button collectible_button;
-    collectible_button.texture = &sprite_collection.sprite_sheet;
-    collectible_button.source = {592, 352, 16, 16};
-    collectible_button.origin = {25, 50};
-    collectible_button.destination = {SCREEN_WIDTH / 2, 60, 60, 60};
-    collectible_button.is_selected = false;
+    Button collectible_button {
+        .texture = &sprite_collection.sprite_sheet,
+        .source = {592, 352, 16, 16},
+        .origin = {25, 50},
+        .destination = {SCREEN_WIDTH / 2, 60, 60, 60},
+        .is_selected = false
+    };
     game.editor.buttons.push_back(collectible_button);
 
-    Button save_button;
-    save_button.texture = &sprite_collection.icons_sprite_sheet;
-    save_button.source = {1194, 1095, 60, 65};
-    save_button.origin = {25, 50};
-    save_button.destination = {(SCREEN_WIDTH / 2) + 60, 60, 60, 60};
-    save_button.is_selected = false;
+    Button save_button {
+        .texture = &sprite_collection.icons_sprite_sheet,
+        .source = {1194, 1095, 60, 65},
+        .origin = {25, 50},
+        .destination = {(SCREEN_WIDTH / 2) + 60, 60, 60, 60},
+        .is_selected = false
+    };
     game.editor.buttons.push_back(save_button);
 
     game.editor.button_selected = -1;
@@ -182,7 +159,8 @@ auto init() -> void {
 
 // ================================================================================================
 
-auto update_user_state() -> void {
+void update_user_state()
+{
     if (WindowShouldClose() || IsKeyPressed(KEY_Q)) {
         game.is_running = false;
         return;
@@ -252,7 +230,7 @@ auto update_user_state() -> void {
 
         if (IsKeyDown(KEY_ONE) || IsKeyDown(KEY_TWO)) {
             for (auto& c : scene.collectibles) {
-                short int scale_collectible = 2;
+                float scale_collectible = 2.f;
                 c.rec.width = sprite_collection.src_collectible.width * scale_collectible;
                 c.rec.height = sprite_collection.src_collectible.height * scale_collectible;
                 c.origin = {c.rec.width / 2, c.rec.height};
@@ -279,7 +257,8 @@ auto update_user_state() -> void {
     }
 }
 
-auto update_player_position() -> void {
+void update_player_position()
+{
     const float delta_time = GetFrameTime();
     const float minX = scene.player.rec.width / 2;
     const float maxX = SCREEN_WIDTH - (scene.player.rec.width / 2);
@@ -320,13 +299,12 @@ auto update_player_position() -> void {
         scene.player.rec.x = maxX;
 }
 
-auto image_ref_for_time_in_walking_state(const int time) -> int {
-    auto image_refs = std::vector<int>{2, 3, 4, 5};
-    int time_per_image = 6;
-
-    int duration = image_refs.size() * time_per_image;
-    int result;
-
+int image_ref_for_time_in_walking_state(const int time)
+{
+    const std::vector<int> image_refs = {2, 3, 4, 5};
+    constexpr int time_per_image = 6;
+    const int duration = static_cast<int>(image_refs.size()) * time_per_image;
+    int result = image_refs.at(0);
     for (size_t i = 0; i < image_refs.size(); ++i) {
         if ((time % duration) < (time_per_image * (i + 1))) {
             result = image_refs.at(i);
@@ -336,7 +314,8 @@ auto image_ref_for_time_in_walking_state(const int time) -> int {
     return result;
 }
 
-auto update_player_image(Player& player, Rectangle& src_player, int player_width) -> void {
+void update_player_image(Player& player, Rectangle& src_player, int player_width)
+{
     if (!player.can_jump) {
         player.current_image = 3;
         src_player.width = (player.state == State::MovingLeft)    ? -player_width
@@ -366,7 +345,8 @@ auto update_player_image(Player& player, Rectangle& src_player, int player_width
     }
 }
 
-auto apply_transform(auto c) -> Rectangle {
+Rectangle apply_transform(auto c)
+{
     return Rectangle {
         .x =      c.rec.x - c.origin.x,
         .y =      c.rec.y - c.origin.y,
@@ -375,7 +355,8 @@ auto apply_transform(auto c) -> Rectangle {
     };
 }
 
-auto update() -> void {
+void update()
+{
     float player_width = 16;
     auto monkeys = std::vector<Vector2> {
         {448, 208},
@@ -391,7 +372,7 @@ auto update() -> void {
     sprite_collection.src_player.x = monkeys.at(scene.player.current_image).x;
     sprite_collection.src_player.y = monkeys.at(scene.player.current_image).y;
 
-    for (auto& c : scene.collectibles) {
+    for (Collectible& c : scene.collectibles) {
         Rectangle col_d = apply_transform(c);
         Rectangle player_d = apply_transform(scene.player);
 
@@ -476,7 +457,8 @@ auto update() -> void {
 
 // ================================================================================================
 
-auto draw_origin(Rectangle rec) -> void {
+void draw_origin(Rectangle rec)
+{
     if (!game.show_origins) {
         return;
     };
@@ -489,7 +471,8 @@ auto draw_origin(Rectangle rec) -> void {
     }, { 0, 0 }, 0, RED);
 }
 
-auto draw() -> void {
+void draw()
+{
     BeginDrawing();
 
     // Environment
@@ -566,19 +549,16 @@ auto draw() -> void {
 
 // ================================================================================================
 
-auto close() -> void {
-    UnloadTexture(sprite_collection.sprite_sheet);
-    UnloadTexture(sprite_collection.icons_sprite_sheet);
-    CloseWindow();
-}
-
-// ================================================================================================
-
-auto main() -> int {
+int main()
+{
     init();
+
     while (game.is_running) {
         update();
         draw();
     }
-    close();
+
+    UnloadTexture(sprite_collection.sprite_sheet);
+    UnloadTexture(sprite_collection.icons_sprite_sheet);
+    CloseWindow();
 }

@@ -1,23 +1,18 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 project(game CXX)
 
-set(CMAKE_CXX_STANDARD 23)
-set(CMAKE_BUILD_TYPE Debug)
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_CXX_STANDARD 20)
 
-find_package(raylib 3.0 REQUIRED)
-# pkg_check_modules(X11 REQUIRED x11)
+find_package(raylib CONFIG REQUIRED)
 
-add_executable(${PROJECT_NAME} src/main.cc)
-
-# target_include_directories(${PROJECT_NAME} PRIVATE ${RAYLIB_INCLUDE_DIRS} ${X11_INCLUDE_DIRS})
+add_executable(${PROJECT_NAME}
+        src/main.cpp
+)
 
 target_link_libraries(${PROJECT_NAME} PRIVATE raylib)
-# target_link_libraries(${PROJECT_NAME} PRIVATE raylib ${X11_LIBRARIES} m pthread dl rt)
 
-add_custom_target(copy_assets ALL
-  COMMAND ${CMAKE_COMMAND} -E copy_directory
-      ${CMAKE_SOURCE_DIR}/assets ${CMAKE_BINARY_DIR}/assets
-  COMMENT "Copying assets to build directory"
+add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        ${CMAKE_BINARY_DIR}/assets
 )

@@ -1,8 +1,7 @@
 # Game 01 - Platform game
 
 ## Dependencies
-- CMake
-- Raylib
+- CMake 3.15 or later
 
 ## Build
 ``` shell
